@@ -33,10 +33,9 @@ class _LoginState extends State<Login> {
       'username' : "${_controllerUsername.text}",
       "password" : "${_controllerPassword.text}"
     }).then((response){
-      print(response.body);           
       pg.dismiss();
         if(response.statusCode==200){
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>HomePage()));
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>MenuUtama()));
         }else{
           Flushbar(
             animationDuration: Duration(milliseconds: 500),
