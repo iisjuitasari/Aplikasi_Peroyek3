@@ -9,18 +9,23 @@ import 'package:http/http.dart' as http;
 import 'dart:convert' as convert;
 
 import 'package:progress_dialog/progress_dialog.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 class Login extends StatefulWidget {
   @override
   _LoginState createState() => _LoginState();
 }
 
 class _LoginState extends State<Login> {
+
+  bool visibel = true;
   final TextEditingController _controllerUsername=TextEditingController();
   final TextEditingController _controllerPassword=TextEditingController();
 
 
 
   Future<bool> login()async{
+    SharedPreferences pref=await SharedPreferences.getInstance();
+
     ProgressDialog pg=new ProgressDialog(context,isDismissible:true );
     pg.style(
         message: "Mohon tunggu",
@@ -35,6 +40,11 @@ class _LoginState extends State<Login> {
     }).then((response){
       pg.dismiss();
         if(response.statusCode==200){
+          var json=convert.jsonDecode(response.body);
+          pref.setString("username", json['data']['username']);
+          pref.setString("id", json['data']['id']);
+          print(json['data']['id']);
+          pref.setString("email", json['data']['email']);
             Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>MenuUtama()));
         }else{
           Flushbar(
@@ -80,7 +90,19 @@ class _LoginState extends State<Login> {
                   padding: const EdgeInsets.only(top: 10.0, left: 20.0, right: 20.0),
                   child: TextField(
                     controller: _controllerPassword,
+                    obscureText: visibel,
                     decoration: InputDecoration(
+                      suffixIcon: IconButton(
+                        icon: visibel
+                            ? Icon(Icons.visibility_off)
+                            :Icon(Icons.visibility),
+                        onPressed: (){
+
+                          setState(() {
+                            visibel = !visibel;
+                          });
+                        },
+                      ),
                     prefixIcon: Icon(Icons.lock),
                     prefixStyle: TextStyle(color: Colors.blue, fontWeight: FontWeight.w600),
                     hintText: "Masukkan Password anda",

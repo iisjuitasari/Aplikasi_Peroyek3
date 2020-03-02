@@ -1,17 +1,27 @@
+import 'package:flushbar/flushbar.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:geprek_alhamdulillah/model/produk.dart';
 import 'package:geprek_alhamdulillah/page/keranjang.dart';
 import 'package:geprek_alhamdulillah/service/server.dart';
 import 'package:http/http.dart' as http;
+import 'package:progress_dialog/progress_dialog.dart';
 import 'dart:convert' as convert;
+
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MenuUtama extends StatefulWidget {
   @override
   _MenuUtamaState createState() => _MenuUtamaState();
 }
 
-class _MenuUtamaState extends State<MenuUtama> {
+class _MenuUtamaState extends State<MenuUtama>with TickerProviderStateMixin {
   List<Data> listProduk=List<Data>();
+  GlobalKey<ScaffoldState> _globalKey=GlobalKey<ScaffoldState>();
+  PersistentBottomSheetController _controller;
+  TextEditingController _controllerQty=TextEditingController();
+
+  String id,nama_pembeli;
 
   Future<bool> getProduk()async{
 
@@ -42,9 +52,131 @@ class _MenuUtamaState extends State<MenuUtama> {
 
     return true;
   }
+
+  Future<bool> addkeranjang(String idproduk,String harga)async{
+    ProgressDialog pg=new ProgressDialog(context,isDismissible: false);
+    pg.style(
+      message: "Loading"
+    );
+    pg.show();
+
+    String url=Server.addKeranjang;
+    await http.post(url,body: {
+      "id_produk" : "$idproduk",
+      "id_pembeli" : "$id",
+      "harga" : "$harga",
+      "jumlah" : "${_controllerQty.text}"
+    }).then((response){
+      pg.dismiss();
+      var json=convert.jsonDecode(response.body);
+      if(json['status']['code']==600){
+        _controller.close();
+        Flushbar(
+          animationDuration: Duration(milliseconds: 500),
+          duration: Duration(milliseconds: 1000),
+          flushbarStyle: FlushbarStyle.GROUNDED,
+          isDismissible: false,
+          messageText: Text(json['status']['message'],style: TextStyle(fontSize: 16,color: Colors.red),),
+        )..show(context);
+      }
+    });
+  }
+
+  getSession()async{
+    SharedPreferences pref=await SharedPreferences.getInstance();
+    setState(() {
+      id=pref.get("id");
+      nama_pembeli=pref.get("username");
+    });
+  }
+   bottommodal(context,String idproduk,String harga){
+    _controllerQty.text="1";
+ _controller=   showBottomSheet(
+        context: context , builder: (BuildContext c){
+      return Container(
+        height: 150,
+        width: MediaQuery.of(context).size.width,
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.only(topLeft: Radius.circular(20),topRight: Radius.circular(20))
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  Container(
+                    height: 30,
+                    width: 40,
+                    child: RaisedButton(
+                      color: Colors.white.withOpacity(0.8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+
+                      ),
+                      onPressed: (){
+                        _controller.setState((){
+                          if(int.parse(_controllerQty.text).toInt()<=1){
+
+                          }else{
+                            _controllerQty.text=(int.parse(_controllerQty.text).toInt()- 1).toString();
+                          }
+                        });
+                      }, child: Text("-",style: TextStyle(color:Colors.green,fontWeight: FontWeight.bold,fontSize: 30),textAlign: TextAlign.center,),),
+                  ),
+                  SizedBox(width: 10,),
+                  Container(
+                    width: 60,
+                    child: TextField(
+                      textAlign: TextAlign.center,
+                      controller: _controllerQty,
+                      keyboardType: TextInputType.numberWithOptions(),
+                      textInputAction: TextInputAction.done,
+                      decoration: InputDecoration(
+                        hintText: "Qty",
+
+
+                      ),
+                    ),
+                  ),
+                  Container(
+                    height: 30,
+                    width: 40,
+                    child: RaisedButton(
+                      color: Colors.white.withOpacity(0.8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+
+                      ),
+                      onPressed: (){
+                        _controller.setState((){
+                          _controllerQty.text=(int.parse(_controllerQty.text).toInt()+ 1).toString();
+                        });
+                      }, child: Text("+",style: TextStyle(color:Colors.green,fontWeight: FontWeight.bold,fontSize: 30),textAlign: TextAlign.center,),),
+                  ),
+                  SizedBox(height: 40,),
+
+                ],
+              ),
+              RaisedButton(onPressed: (){
+                addkeranjang(idproduk, harga);
+              },child: Text("Masukan Keranjang",textAlign: TextAlign.center,),)
+
+            ],
+          ),
+        ),
+      );
+    });
+  }
+  
   @override
   void initState() {
     getProduk();
+    getSession();
     super.initState();
   }
 
@@ -52,6 +184,7 @@ class _MenuUtamaState extends State<MenuUtama> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
+        key: _globalKey,
         appBar: AppBar(
           actions: <Widget>[
             IconButton(
@@ -119,7 +252,9 @@ class _MenuUtamaState extends State<MenuUtama> {
                               Text(listProduk[index].keterangan)
                             ],
                           ),
-                          trailing: IconButton(icon: Icon(Icons.add,size: 25,color: Colors.blue,), onPressed: (){}),
+                          trailing: IconButton(icon: Icon(Icons.add,size: 25,color: Colors.blue,), onPressed: (){
+                            bottommodal(context,listProduk[index].idProduk,listProduk[index].harga.toString());
+                          }),
                         ));
 
                   }),

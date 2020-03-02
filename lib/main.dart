@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:geprek_alhamdulillah/page/list.dart';
 import 'package:geprek_alhamdulillah/page/login.dart';
 import 'package:geprek_alhamdulillah/page/register.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() => runApp(MyApp());
 
@@ -10,7 +11,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      
+      debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
       theme: ThemeData(
         // This is the theme of your application.
@@ -24,8 +25,38 @@ class MyApp extends StatelessWidget {
         // is not restarted.
         primarySwatch: Colors.blue,
       ),
-      home: Login(),
+      home: CekSession(),
     );
   }
 }
+
+class CekSession extends StatefulWidget {
+  @override
+  _CekSessionState createState() => _CekSessionState();
+}
+
+class _CekSessionState extends State<CekSession> {
+
+  getSession()async{
+    SharedPreferences pref=await SharedPreferences.getInstance();
+    if(pref.get("username")!=null){
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>MenuUtama()));
+    }else{
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>Login()));
+    }
+  }
+  @override
+  void initState() {
+    Future.delayed(Duration.zero,(){
+      getSession();
+    });
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container();
+  }
+}
+
 
